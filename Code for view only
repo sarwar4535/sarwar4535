@@ -1,0 +1,59 @@
+(async () => {
+
+let trustedURL;
+if (window.trustedTypes && trustedTypes.createPolicy) {
+    const policy = trustedTypes.createPolicy('myPolicy', {
+        createScriptURL: (input) => input
+    });
+    trustedURL = policy.createScriptURL('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+} else {
+    trustedURL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+}
+
+let script = document.createElement("script");
+
+script.onload = async function () {
+
+    const { jsPDF } = window.jspdf;
+    let pdf = new jsPDF();
+
+    // 🔥 Step 1: Auto scroll to load all pages
+    console.log("Scrolling to load all pages...");
+    for (let i = 0; i < 50; i++) {
+        window.scrollBy(0, window.innerHeight);
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    await new Promise(r => setTimeout(r, 2000)); // wait extra
+
+    // 🔥 Step 2: Collect all images
+    let images = Array.from(document.querySelectorAll("img"))
+        .filter(img => img.src.startsWith("blob:"));
+
+    console.log("Total pages found:", images.length);
+
+    // 🔥 Step 3: Convert images to PDF
+    for (let i = 0; i < images.length; i++) {
+        let img = images[i];
+
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        ctx.drawImage(img, 0, 0);
+
+        let imgData = canvas.toDataURL("image/jpeg", 1.0);
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297); // A4
+    }
+
+    pdf.save("full_download.pdf");
+};
+
+script.src = trustedURL;
+document.body.appendChild(script);
+
+})();
